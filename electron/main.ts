@@ -98,7 +98,7 @@ function createWindow() {
   
   // Load UI
   if (process.env.NODE_ENV === 'development') {
-    // We don't use loadURL for Sortify spec, strictly loadFile:
+    // We don't use loadURL for Endpoint Forge spec, strictly loadFile:
     // mainWindow.loadURL('http://localhost:3000');
   }
   

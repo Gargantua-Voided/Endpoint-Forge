@@ -1,5 +1,5 @@
 . "$PSScriptRoot\build-version-helper.ps1"
-$version = Get-SortifyBuildVersion
+$version = Get-BuildVersion
 
 if (Test-Path "release") {
     Remove-Item -Recurse -Force "release"

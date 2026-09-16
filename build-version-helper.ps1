@@ -1,6 +1,6 @@
 # build-version-helper.ps1 - Automate version bumping
 
-function Get-SortifyBuildVersion {
+function Get-BuildVersion {
     Write-Host "Enter version (e.g. 1.0.1) [Default: 1.0.0 in 3s]: " -NoNewline
     $version = ""
     $timeout = 3
