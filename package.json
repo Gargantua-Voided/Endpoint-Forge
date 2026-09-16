@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
     "build": "vite build && esbuild electron/main.ts --bundle --platform=node --format=cjs --external:electron --outfile=dist-electron/main.cjs && esbuild electron/preload.ts --bundle --platform=node --format=cjs --external:electron --outfile=dist-electron/preload.cjs",
+    "package-app": "npm run build && electron-builder --win -p never",
     "electron:start": "npm run build && electron .",
     "preview": "vite preview",
     "clean": "rm -rf dist dist-electron release",
@@ -18,8 +19,8 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "YOUR_GITHUB_USERNAME",
-        "repo": "YOUR_GITHUB_REPO_NAME"
+        "owner": "Gargantua-Voided",
+        "repo": "Endpoint-Forge"
       }
     ],
     "appId": "com.endpointforge.app",
