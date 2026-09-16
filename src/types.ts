@@ -12,6 +12,7 @@ export interface ElectronAPI {
   selectSaveFile: (defaultName: string) => Promise<string | null>;
   openExternal: (url: string) => void;
   packageIntuneLocal: (sourceDir: string, setupFile: string, outPath: string) => Promise<{ success: boolean; error?: string }>;
+  packageIntuneLocalFiles: (filePaths: string[], setupFile: string, outPath: string) => Promise<{success: boolean, path?: string, error?: string}>;
   getIntuneStatus: () => Promise<{ ready: boolean; error?: string }>;
 }
 

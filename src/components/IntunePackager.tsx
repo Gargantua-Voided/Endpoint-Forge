@@ -92,7 +92,8 @@ export default function IntunePackager() {
   };
 
   const handlePackageLocal = async () => {
-    if (!electronAvailable || !selectedFolder || !setupFile.trim()) return;
+    if (!electronAvailable || !setupFile.trim()) return;
+    if (!selectedFolder && sourceFiles.length === 0) return;
     
     setError(null);
     setSuccessMsg(null);
@@ -107,10 +108,19 @@ export default function IntunePackager() {
         return;
       }
       
-      const result = await window.electronAPI.packageIntuneLocal(selectedFolder, setupFile.trim(), savePath);
+      let result;
+      if (selectedFolder) {
+         result = await window.electronAPI.packageIntuneLocal(selectedFolder, setupFile.trim(), savePath);
+      } else {
+         const filePaths = sourceFiles.map(f => (f as any).path).filter(p => !!p);
+         if (filePaths.length === 0) {
+            throw new Error("Could not resolve local file paths. Please use the web version or select a folder instead.");
+         }
+         result = await window.electronAPI.packageIntuneLocalFiles(filePaths, setupFile.trim(), savePath);
+      }
       
       if (result.success) {
-        setSuccessMsg(`Successfully created ${savePath.split(/[\/\\]/).pop()}`);
+        setSuccessMsg(`Successfully created ${savePath.split(/[\\/]/).pop()}`);
       } else {
         setError(result.error || 'Unknown error occurred during packaging.');
       }
@@ -192,17 +202,15 @@ export default function IntunePackager() {
           <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6 shadow-sm">
             <h2 className="text-base font-semibold mb-4">1. Source Files</h2>
             
-            {electronAvailable ? (
-              <div className="space-y-4">
+            {electronAvailable && (
+              <div className="space-y-4 mb-4">
                 <button 
                   onClick={handleSelectFolder}
-                  className="w-full relative flex flex-col items-center justify-center h-32 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer transition-colors"
+                  className="w-full relative flex flex-col items-center justify-center h-20 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer transition-colors"
                 >
-                  <FolderUp className="w-8 h-8 mb-3 text-slate-400" />
-                  <p className="mb-2 text-sm text-slate-500 dark:text-slate-400">
-                    <span className="font-semibold">Click to select folder</span>
+                  <p className="mb-1 text-sm text-slate-500 dark:text-slate-400">
+                    <span className="font-semibold">Click here to select an entire folder</span>
                   </p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Select the directory containing your installer</p>
                 </button>
                 
                 {selectedFolder && (
@@ -211,8 +219,10 @@ export default function IntunePackager() {
                     <span className="truncate font-mono" title={selectedFolder}>{selectedFolder}</span>
                   </div>
                 )}
+                
+                <div className="text-center text-xs text-slate-400">OR</div>
               </div>
-            ) : (
+            )}
               <div className="space-y-4">
                 <label className="relative flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer transition-colors">
                   <div className="flex flex-col items-center justify-center pt-5 pb-6">
@@ -245,7 +255,6 @@ export default function IntunePackager() {
                   </div>
                 )}
               </div>
-            )}
           </div>
 
           <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6 shadow-sm">
@@ -328,7 +337,7 @@ export default function IntunePackager() {
             <div className="mt-6">
               <button 
                 onClick={electronAvailable ? handlePackageLocal : handlePackageWeb}
-                disabled={backendStatus.status !== 'ready' || isProcessing || !setupFile.trim() || (electronAvailable ? !selectedFolder : sourceFiles.length === 0)}
+                disabled={backendStatus.status !== 'ready' || isProcessing || !setupFile.trim() || (!selectedFolder && sourceFiles.length === 0)}
                 className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow"
               >
                 {isProcessing ? (

@@ -408,3 +408,57 @@ ipcMain.handle('package-intune-local', async (_e, sourceDir, setupFile, outPath)
     return { success: false, error: err.message };
   }
 });
+
+ipcMain.handle('package-intune-local-files', async (_e, filePaths: string[], setupFile: string, outPath: string) => {
+  try {
+    const exactUtilPath = app.isPackaged
+      ? path.join(process.resourcesPath, 'IntuneWinAppUtil.exe')
+      : path.join(__dirname, '../../bin/IntuneWinAppUtil.exe');
+      
+    if (!fs.existsSync(exactUtilPath)) {
+      return { success: false, error: 'IntuneWinAppUtil.exe not found. The packaging component is missing.' };
+    }
+
+    logToServer(`Running local Intune packaging from individual files...`);
+    
+    // Create a temp directory
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'intune-packager-'));
+    
+    // Copy all files into it
+    for (const file of filePaths) {
+      const destPath = path.join(tempDir, path.basename(file));
+      fs.copyFileSync(file, destPath);
+    }
+
+    const outDir = path.dirname(outPath);
+    
+    return new Promise((resolve) => {
+      execFile(exactUtilPath, ['-c', tempDir, '-s', setupFile, '-o', outDir, '-q'], (error, stdout, stderr) => {
+        // Clean up temp dir
+        try { fs.rmSync(tempDir, { recursive: true, force: true }); } catch (e) {}
+        
+        if (error) {
+          logToServer(`Intune Packaging Failed: ${error.message}`);
+          resolve({ success: false, error: error.message });
+          return;
+        }
+        
+        // Find generated file and rename/move to exact outPath if needed
+        const files = fs.readdirSync(outDir);
+        const intunewinFile = files.find(f => f.endsWith('.intunewin'));
+        
+        if (intunewinFile) {
+          const generatedPath = path.join(outDir, intunewinFile);
+          if (generatedPath !== outPath) {
+            fs.renameSync(generatedPath, outPath);
+          }
+        }
+        
+        logToServer(`Intune local files packaging complete.`);
+        resolve({ success: true, path: outPath });
+      });
+    });
+  } catch (err: any) {
+    return { success: false, error: err.message };
+  }
+});

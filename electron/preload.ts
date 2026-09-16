@@ -27,5 +27,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   selectSaveFile: (defaultName: string) => ipcRenderer.invoke('select-save-file', defaultName),
   packageIntuneLocal: (sourceDir: string, setupFile: string, outPath: string) => 
     ipcRenderer.invoke('package-intune-local', sourceDir, setupFile, outPath),
+  packageIntuneLocalFiles: (filePaths: string[], setupFile: string, outPath: string) => ipcRenderer.invoke('package-intune-local-files', filePaths, setupFile, outPath),
   getIntuneStatus: () => ipcRenderer.invoke('get-intune-status')
 });
