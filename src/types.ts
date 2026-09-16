@@ -8,6 +8,7 @@ export interface ElectronAPI {
   checkForUpdates: () => Promise<any>;
   onUpdateEvent: (callback: (event: any) => void) => void;
   installUpdate: () => Promise<void>;
+  selectFiles: () => Promise<string[] | null>;
   selectFolder: () => Promise<string | null>;
   selectSaveFile: (defaultName: string) => Promise<string | null>;
   openExternal: (url: string) => void;

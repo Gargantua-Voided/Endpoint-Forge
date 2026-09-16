@@ -5,7 +5,7 @@ export default function IntunePackager() {
   const [setupFile, setSetupFile] = useState('');
   
   // Web Mode State
-  const [sourceFiles, setSourceFiles] = useState<File[]>([]);
+  const [sourceFiles, setSourceFiles] = useState<any[]>([]);
   
   // Desktop Mode State
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
@@ -75,6 +75,31 @@ export default function IntunePackager() {
 
   const handleRemoveFile = (index: number) => {
     setSourceFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSelectFiles = async () => {
+    if (!electronAvailable) return;
+    try {
+      const filePaths = await window.electronAPI.selectFiles();
+      if (filePaths && filePaths.length > 0) {
+        const fileObjects = filePaths.map(p => ({
+          name: p.split(/[\\/]/).pop(),
+          path: p
+        }));
+        setSourceFiles(prev => [...prev, ...fileObjects]);
+        setError(null);
+        setSuccessMsg(null);
+        
+        if (!setupFile) {
+          const guess = fileObjects.find(f => f.name.match(/\.(exe|msi|ps1|bat|cmd)$/i)) || fileObjects[0];
+          if (guess) {
+            setSetupFile(guess.name);
+          }
+        }
+      }
+    } catch (err: any) {
+      setError(`Failed to select files: ${err.message}`);
+    }
   };
 
   const handleSelectFolder = async () => {
@@ -204,14 +229,24 @@ export default function IntunePackager() {
             
             {electronAvailable && (
               <div className="space-y-4 mb-4">
-                <button 
-                  onClick={handleSelectFolder}
-                  className="w-full relative flex flex-col items-center justify-center h-20 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer transition-colors"
-                >
-                  <p className="mb-1 text-sm text-slate-500 dark:text-slate-400">
-                    <span className="font-semibold">Click here to select an entire folder</span>
-                  </p>
-                </button>
+                <div className="grid grid-cols-2 gap-4">
+                  <button 
+                    onClick={handleSelectFolder}
+                    className="w-full relative flex flex-col items-center justify-center h-20 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer transition-colors"
+                  >
+                    <p className="mb-1 text-sm text-slate-500 dark:text-slate-400 text-center px-2">
+                      <span className="font-semibold">Select Folder</span>
+                    </p>
+                  </button>
+                  <button 
+                    onClick={handleSelectFiles}
+                    className="w-full relative flex flex-col items-center justify-center h-20 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer transition-colors"
+                  >
+                    <p className="mb-1 text-sm text-slate-500 dark:text-slate-400 text-center px-2">
+                      <span className="font-semibold">Select Files</span>
+                    </p>
+                  </button>
+                </div>
                 
                 {selectedFolder && (
                   <div className="flex items-center space-x-2 text-sm text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-800 overflow-hidden">
@@ -220,20 +255,22 @@ export default function IntunePackager() {
                   </div>
                 )}
                 
-                <div className="text-center text-xs text-slate-400">OR</div>
+                
               </div>
             )}
               <div className="space-y-4">
-                <label className="relative flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer transition-colors">
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <UploadCloud className="w-8 h-8 mb-3 text-slate-400" />
-                    <p className="mb-2 text-sm text-slate-500 dark:text-slate-400">
-                      <span className="font-semibold">Click to upload files</span>
-                    </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Select one or multiple files</p>
-                  </div>
-                  <input type="file" multiple className="hidden" onChange={handleFilesUpload} ref={fileInputRef} />
-                </label>
+                {!electronAvailable && (
+                  <label className="relative flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 cursor-pointer transition-colors">
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <UploadCloud className="w-8 h-8 mb-3 text-slate-400" />
+                      <p className="mb-2 text-sm text-slate-500 dark:text-slate-400">
+                        <span className="font-semibold">Click to upload files</span>
+                      </p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Select one or multiple files</p>
+                    </div>
+                    <input type="file" multiple className="hidden" onChange={handleFilesUpload} ref={fileInputRef} />
+                  </label>
+                )}
                 
                 {sourceFiles.length > 0 && (
                   <div className="space-y-2 mt-4 max-h-48 overflow-y-auto pr-2 styled-scrollbar">

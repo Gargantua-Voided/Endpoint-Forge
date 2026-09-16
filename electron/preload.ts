@@ -22,6 +22,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   installUpdate: () => ipcRenderer.invoke('install-update'),
 
   // Filesystem + Packager
+  selectFiles: () => ipcRenderer.invoke('select-files'),
   selectFolder: () => ipcRenderer.invoke('select-folder'),
   openExternal: (url: string) => ipcRenderer.send('open-external', url),
   selectSaveFile: (defaultName: string) => ipcRenderer.invoke('select-save-file', defaultName),

@@ -333,6 +333,15 @@ ipcMain.handle('install-update', () => {
   autoUpdater.quitAndInstall();
 });
 
+ipcMain.handle('select-files', async () => {
+  if (!mainWindow) return null;
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openFile', 'multiSelections']
+  });
+  if (result.canceled) return null;
+  return result.filePaths;
+});
+
 ipcMain.handle('select-folder', async () => {
   if (!mainWindow) return null;
   const result = await dialog.showOpenDialog(mainWindow, {
