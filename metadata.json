@@ -1,0 +1,8 @@
+{
+  "name": "Endpoint Forge",
+  "description": "Standalone Electron + Vite desktop application with a toggleable network server.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
