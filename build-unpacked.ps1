@@ -5,6 +5,13 @@ if (Test-Path "release") {
     Remove-Item -Recurse -Force "release"
 }
 
+Write-Host "Installing dependencies..."
+cmd.exe /c "npm install"
+if ($LASTEXITCODE -ne 0) {
+    Read-Host "npm install failed. Press Enter to exit..."
+    exit $LASTEXITCODE
+}
+
 Write-Host "Compiling Vite and TypeScript..."
 cmd.exe /c "npm run build"
 if ($LASTEXITCODE -ne 0) {
