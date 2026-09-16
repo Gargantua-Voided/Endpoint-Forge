@@ -2,15 +2,12 @@ import { app, BrowserWindow, ipcMain, nativeImage, Tray, Menu, shell, dialog } f
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
-import { fileURLToPath } from 'url';
 import express from 'express';
 import { autoUpdater } from 'electron-updater';
 import { execFile } from 'child_process';
 import multer from 'multer';
 import AdmZip from 'adm-zip';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
