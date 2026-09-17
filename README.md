@@ -8,8 +8,7 @@
 
 ---
 <img width="1380" height="817" alt="image" src="https://github.com/user-attachments/assets/92cedb91-5ae1-44ad-826c-d21cd85f0fb5" />
-<img width="1532" height="1025" alt="image" src="https://github.com/user-attachments/assets/1c0c05f3-aa4c-4881-86ec-3682a7af0971" />
-<img width="1506" height="1010" alt="image" src="https://github.com/user-attachments/assets/163be1c2-6809-4ebe-a1cc-f123acea382d" />
+
 
 
 
@@ -17,6 +16,8 @@
 ## 📖 Overview
 
 **Endpoint Forge** is a modern desktop utility application designed for IT administration and local network sharing. Built on the Electron framework with a React/Vite frontend, it allows you to run local utility applications—such as Android Enterprise Intune QR Generators—and broadcast them securely to other devices on your local network.
+<img width="1532" height="1025" alt="image" src="https://github.com/user-attachments/assets/1c0c05f3-aa4c-4881-86ec-3682a7af0971" />
+<img width="1506" height="1010" alt="image" src="https://github.com/user-attachments/assets/163be1c2-6809-4ebe-a1cc-f123acea382d" />
 
 ## ✨ Key Features
 
