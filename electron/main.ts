@@ -240,7 +240,7 @@ ipcMain.handle('start-server', async (_e, port) => {
           const filePath = path.join(outDir, intunewinFile);
           res.download(filePath, intunewinFile, (err) => {
             // Cleanup
-            fs.rmSync(workDir, { recursive: true, force: true });
+            try { fs.rmSync(workDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 }); } catch (e) { logToServer(`Cleanup failed: ${e.message}`); }
           });
         });
         
