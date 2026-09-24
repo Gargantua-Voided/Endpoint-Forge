@@ -7,6 +7,15 @@ import { autoUpdater } from 'electron-updater';
 import { execFile } from 'child_process';
 import multer from 'multer';
 import AdmZip from 'adm-zip';
+import { createNsisRouter } from './apiRoutes';
+import {
+  resolveMakensis,
+  scanZipBufferOrPath,
+  generateNsisScript,
+  buildInstallerFromZip,
+  buildInstallerFromFolder,
+  NsisBuildOptions
+} from './nsisService';
 
 
 let mainWindow: BrowserWindow | null = null;
@@ -250,6 +259,9 @@ ipcMain.handle('start-server', async (_e, port) => {
       }
     });
     
+    // NSIS Web Endpoints
+    serverApp.use('/api/nsis', createNsisRouter(app.isPackaged, process.resourcesPath));
+
     // Serve the compiled UI to web users
     serverApp.use(express.static(path.join(__dirname, '../dist')));
     
@@ -471,3 +483,48 @@ ipcMain.handle('package-intune-local-files', async (_e, filePaths: string[], set
     return { success: false, error: err.message };
   }
 });
+
+// NSIS Installer IPC Handlers
+ipcMain.handle('get-nsis-status', async () => {
+  const makensis = resolveMakensis(app.isPackaged, process.resourcesPath);
+  if (!makensis) {
+    return { ready: false, error: 'NSIS compiler (makensis) is not available.' };
+  }
+  return { ready: true, path: makensis.path };
+});
+
+ipcMain.handle('preview-nsis-script', async (_e, options: NsisBuildOptions) => {
+  return generateNsisScript(options, '$SOURCE_DIR', '$OUTFILE');
+});
+
+ipcMain.handle('scan-nsis-zip-local', async (_e, zipPath: string) => {
+  try {
+    return scanZipBufferOrPath(zipPath, path.basename(zipPath));
+  } catch (err: any) {
+    return {
+      executables: [],
+      suggestedName: path.basename(zipPath, path.extname(zipPath)),
+      suggestedVersion: '1.0.0',
+      fileCount: 0
+    };
+  }
+});
+
+ipcMain.handle('build-nsis-local', async (_e, zipPath: string, options: NsisBuildOptions, outPath: string) => {
+  const makensis = resolveMakensis(app.isPackaged, process.resourcesPath);
+  if (!makensis) {
+    return { success: false, error: 'NSIS compiler (makensis) was not found.' };
+  }
+  logToServer(`Building NSIS installer from zip ${zipPath} -> ${outPath}`);
+  return await buildInstallerFromZip(zipPath, options, outPath, makensis);
+});
+
+ipcMain.handle('build-nsis-folder', async (_e, folderPath: string, options: NsisBuildOptions, outPath: string) => {
+  const makensis = resolveMakensis(app.isPackaged, process.resourcesPath);
+  if (!makensis) {
+    return { success: false, error: 'NSIS compiler (makensis) was not found.' };
+  }
+  logToServer(`Building NSIS installer from folder ${folderPath} -> ${outPath}`);
+  return await buildInstallerFromFolder(folderPath, options, outPath, makensis);
+});
+

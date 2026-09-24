@@ -1,3 +1,22 @@
+export interface NsisBuildOptions {
+  appName: string;
+  appVersion: string;
+  publisher?: string;
+  mainExe: string;
+  installScope?: 'perMachine' | 'currentUser';
+  createDesktopShortcut?: boolean;
+  createStartMenuShortcut?: boolean;
+  createUninstaller?: boolean;
+  runAfterInstall?: boolean;
+}
+
+export interface ZipScanResult {
+  executables: string[];
+  suggestedName: string;
+  suggestedVersion: string;
+  fileCount: number;
+}
+
 export interface ElectronAPI {
   windowControl: (action: 'minimize' | 'maximize' | 'close') => void;
   startServer: (port: number) => Promise<{ success: boolean; message?: string }>;
@@ -15,6 +34,12 @@ export interface ElectronAPI {
   packageIntuneLocal: (sourceDir: string, setupFile: string, outPath: string) => Promise<{ success: boolean; error?: string }>;
   packageIntuneLocalFiles: (filePaths: string[], setupFile: string, outPath: string) => Promise<{success: boolean, path?: string, error?: string}>;
   getIntuneStatus: () => Promise<{ ready: boolean; error?: string }>;
+  // NSIS Installer Builder
+  buildNsisLocal: (zipPath: string, options: NsisBuildOptions, outPath: string) => Promise<{ success: boolean; error?: string }>;
+  buildNsisFolder: (folderPath: string, options: NsisBuildOptions, outPath: string) => Promise<{ success: boolean; error?: string }>;
+  scanNsisZipLocal: (zipPath: string) => Promise<ZipScanResult>;
+  getNsisStatus: () => Promise<{ ready: boolean; error?: string }>;
+  previewNsisScript: (options: NsisBuildOptions) => Promise<string>;
 }
 
 declare global {

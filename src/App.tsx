@@ -9,7 +9,8 @@ import logoSrc from '../logo.png';
 import './types'; // Load types
 import IntuneQRGenerator from './components/IntuneQRGenerator';
 import IntunePackager from './components/IntunePackager';
-import { Package } from 'lucide-react';
+import NsisBuilder from './components/NsisBuilder';
+import { Package, Hammer } from 'lucide-react';
 
 interface OpenedApp {
   id: string;
@@ -147,6 +148,12 @@ export default function App() {
   };
 
   const availableApps = [
+    {
+      id: 'app_nsis_builder',
+      name: 'NSIS Installer Builder',
+      description: 'Convert application ZIP archives into Windows setup installers (.exe).',
+      icon: Hammer
+    },
     {
       id: 'app_intune_packager',
       name: 'Intune Packager',
@@ -287,6 +294,11 @@ export default function App() {
           {/* Intune Packager App */}
           {activeTab === 'app_intune_packager' && (
             <IntunePackager />
+          )}
+
+          {/* NSIS Installer Builder App */}
+          {activeTab === 'app_nsis_builder' && (
+            <NsisBuilder />
           )}
 
           {/* Settings Tab (Electron Only) */}

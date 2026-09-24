@@ -29,5 +29,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   packageIntuneLocal: (sourceDir: string, setupFile: string, outPath: string) => 
     ipcRenderer.invoke('package-intune-local', sourceDir, setupFile, outPath),
   packageIntuneLocalFiles: (filePaths: string[], setupFile: string, outPath: string) => ipcRenderer.invoke('package-intune-local-files', filePaths, setupFile, outPath),
-  getIntuneStatus: () => ipcRenderer.invoke('get-intune-status')
+  getIntuneStatus: () => ipcRenderer.invoke('get-intune-status'),
+  
+  // NSIS Installer Builder
+  buildNsisLocal: (zipPath: string, options: any, outPath: string) => ipcRenderer.invoke('build-nsis-local', zipPath, options, outPath),
+  buildNsisFolder: (folderPath: string, options: any, outPath: string) => ipcRenderer.invoke('build-nsis-folder', folderPath, options, outPath),
+  scanNsisZipLocal: (zipPath: string) => ipcRenderer.invoke('scan-nsis-zip-local', zipPath),
+  getNsisStatus: () => ipcRenderer.invoke('get-nsis-status'),
+  previewNsisScript: (options: any) => ipcRenderer.invoke('preview-nsis-script', options)
 });
