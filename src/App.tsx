@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Settings, Server, Play, Square, RefreshCw, Moon, Sun, X, Minus, Square as MaximizeSquare, QrCode, Grid, Terminal } from 'lucide-react';
 import logoSrc from '../logo.png';
 import './types'; // Load types

@@ -65,9 +65,9 @@ export default function IntunePackager() {
       
       // Auto-guess setup file if not set
       if (!setupFile) {
-        const guess = files.find(f => f.name.match(/\.(exe|msi|ps1|bat|cmd)$/i)) || files[0];
+        const guess = files.find((f: File) => f.name.match(/\.(exe|msi|ps1|bat|cmd)$/i)) || files[0];
         if (guess) {
-          setSetupFile(guess.name);
+          setSetupFile((guess as File).name);
         }
       }
     }
@@ -116,6 +116,21 @@ export default function IntunePackager() {
     }
   };
 
+  const resetForm = () => {
+    setSetupFile('');
+    setSourceFiles([]);
+    setSelectedFolder(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleClearAll = () => {
+    resetForm();
+    setError(null);
+    setSuccessMsg(null);
+  };
+
   const handlePackageLocal = async () => {
     if (!electronAvailable || !setupFile.trim()) return;
     if (!selectedFolder && sourceFiles.length === 0) return;
@@ -146,6 +161,7 @@ export default function IntunePackager() {
       
       if (result.success) {
         setSuccessMsg(`Successfully created ${savePath.split(/[\\/]/).pop()}`);
+        resetForm();
       } else {
         setError(result.error || 'Unknown error occurred during packaging.');
       }
@@ -203,7 +219,8 @@ export default function IntunePackager() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
       
-      setSuccessMsg('Package downloaded successfully.');
+      setSuccessMsg('Package created and downloaded successfully.');
+      resetForm();
     } catch (err: any) {
       setError(err.message || 'Network error.');
     } finally {
@@ -213,11 +230,21 @@ export default function IntunePackager() {
 
   return (
     <div className="max-w-4xl space-y-6 animate-in fade-in duration-300">
-      <div className="space-y-2">
-        <h1 className="text-2xl font-bold tracking-tight">Intune App Packager</h1>
-        <p className="text-slate-500 dark:text-slate-400">
-          Convert Windows application installers into .intunewin format for Microsoft Company Portal deployment.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-bold tracking-tight">Intune App Packager</h1>
+          <p className="text-slate-500 dark:text-slate-400">
+            Convert Windows application installers into .intunewin format for Microsoft Company Portal deployment.
+          </p>
+        </div>
+        {(setupFile || selectedFolder || sourceFiles.length > 0) && (
+          <button
+            onClick={handleClearAll}
+            className="self-start sm:self-auto text-xs px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+          >
+            Clear / New Package
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -249,13 +276,20 @@ export default function IntunePackager() {
                 </div>
                 
                 {selectedFolder && (
-                  <div className="flex items-center space-x-2 text-sm text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-800 overflow-hidden">
-                    <CheckCircle2 size={16} className="shrink-0" />
-                    <span className="truncate font-mono" title={selectedFolder}>{selectedFolder}</span>
+                  <div className="flex items-center justify-between space-x-2 text-sm text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-100 dark:border-blue-800 overflow-hidden">
+                    <div className="flex items-center space-x-2 overflow-hidden">
+                      <CheckCircle2 size={16} className="shrink-0" />
+                      <span className="truncate font-mono" title={selectedFolder}>{selectedFolder}</span>
+                    </div>
+                    <button
+                      onClick={() => setSelectedFolder(null)}
+                      className="text-slate-400 hover:text-red-500 hover:bg-blue-100 dark:hover:bg-slate-800 transition-colors p-1 rounded-md shrink-0"
+                      title="Deselect folder"
+                    >
+                      <X size={14} />
+                    </button>
                   </div>
                 )}
-                
-                
               </div>
             )}
               <div className="space-y-4">
@@ -367,6 +401,13 @@ export default function IntunePackager() {
                 <div className="flex flex-col items-center text-emerald-600 dark:text-emerald-400 space-y-3 w-full">
                   <CheckCircle2 size={32} />
                   <p className="text-sm font-medium">{successMsg}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Workspace reset and ready for the next application.</p>
+                  <button
+                    onClick={() => setSuccessMsg(null)}
+                    className="mt-1 text-xs font-semibold px-3 py-1.5 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 rounded-md hover:bg-emerald-200 dark:hover:bg-emerald-900/60 transition-colors"
+                  >
+                    Dismiss
+                  </button>
                 </div>
               )}
             </div>
