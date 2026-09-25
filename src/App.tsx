@@ -10,7 +10,7 @@ import './types'; // Load types
 import IntuneQRGenerator from './components/IntuneQRGenerator';
 import IntunePackager from './components/IntunePackager';
 import NsisBuilder from './components/NsisBuilder';
-import { Package, Hammer } from 'lucide-react';
+import { Package, Hammer, ExternalLink, Download, CheckCircle2, AlertTriangle } from 'lucide-react';
 
 interface OpenedApp {
   id: string;
@@ -35,6 +35,8 @@ export default function App() {
   const [updateStatus, setUpdateStatus] = useState<string>('');
   const [isUpdateReady, setIsUpdateReady] = useState(false);
   const [updateProgress, setUpdateProgress] = useState(0);
+  const [isUpdateDownloading, setIsUpdateDownloading] = useState(false);
+  const [isUpdateError, setIsUpdateError] = useState(false);
   
   const [openedApps, setOpenedApps] = useState<OpenedApp[]>([]);
   const [serverLogs, setServerLogs] = useState<ServerLog[]>([]);
@@ -63,23 +65,42 @@ export default function App() {
       
       window.electronAPI.onUpdateEvent((event) => {
         if (event.type === 'checking') {
-          setUpdateStatus('Checking for updates...');
+          setUpdateStatus(event.message || 'Checking for updates on GitHub...');
           setIsUpdateReady(false);
+          setIsUpdateDownloading(false);
+          setIsUpdateError(false);
         }
         if (event.type === 'available') {
-          setUpdateStatus(`Downloading update: ${event.info?.version || ''}...`);
+          setUpdateStatus(`Downloading update (${event.info?.version || 'v1.1.0'})...`);
+          setIsUpdateDownloading(true);
+          setIsUpdateError(false);
+          setIsUpdateReady(false);
         }
         if (event.type === 'progress') {
           const percent = Math.round(event.progress || 0);
           setUpdateProgress(percent);
-          setUpdateStatus(`Downloading: ${percent}%`);
+          setUpdateStatus(`Downloading update: ${percent}%`);
+          setIsUpdateDownloading(true);
         }
         if (event.type === 'downloaded') {
-          setUpdateStatus('Update ready to install!');
+          setUpdateStatus(`Update ${event.info?.version ? event.info.version + ' ' : ''}is ready to install!`);
           setIsUpdateReady(true);
+          setIsUpdateDownloading(false);
+          setIsUpdateError(false);
+          setUpdateProgress(100);
         }
-        if (event.type === 'not-available') setUpdateStatus('Up to date');
-        if (event.type === 'error') setUpdateStatus(`Update error: ${event.message}`);
+        if (event.type === 'not-available') {
+          setUpdateStatus('Endpoint Forge is currently up to date.');
+          setIsUpdateDownloading(false);
+          setIsUpdateError(false);
+          setIsUpdateReady(false);
+        }
+        if (event.type === 'error') {
+          setUpdateStatus(`Update failed: ${event.message}`);
+          setIsUpdateDownloading(false);
+          setIsUpdateError(true);
+          setIsUpdateReady(false);
+        }
       });
     }
 
@@ -421,36 +442,87 @@ export default function App() {
 
                 {/* Updates */}
                 <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden shadow-sm">
-                  <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
+                  <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 flex items-center justify-between">
                     <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Updates</h2>
+                    <span className="text-xs font-mono px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                      v1.1.0
+                    </span>
                   </div>
-                  <div className="p-6 flex items-center justify-between">
-                    <div className="space-y-1">
-                      <label className="font-medium">Application Updates</label>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">
-                        {updateStatus || 'Fetch the latest release from GitHub'}
-                      </p>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      {isUpdateReady && (
-                        <button 
-                          onClick={() => window.electronAPI.installUpdate()}
-                          className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                  <div className="p-6 space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="space-y-1">
+                        <label className="font-medium text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                          Application Updates
+                          {isUpdateReady && (
+                            <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 font-medium">
+                              <CheckCircle2 size={12} /> Ready
+                            </span>
+                          )}
+                          {isUpdateError && (
+                            <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/50 text-rose-700 dark:text-rose-400 font-medium">
+                              <AlertTriangle size={12} /> Attention
+                            </span>
+                          )}
+                        </label>
+                        <p className={`text-sm ${isUpdateError ? 'text-rose-600 dark:text-rose-400' : 'text-slate-500 dark:text-slate-400'}`}>
+                          {updateStatus || 'Fetch the latest release from GitHub'}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => {
+                            const url = 'https://github.com/Gargantua-Voided/Endpoint-Forge/releases';
+                            if (window.electronAPI) {
+                              window.electronAPI.openExternal(url);
+                            } else {
+                              window.open(url, '_blank');
+                            }
+                          }}
+                          title="Open GitHub Releases"
+                          className="flex items-center space-x-1.5 px-3 py-2 text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors"
                         >
-                          <span>Install & Restart</span>
+                          <ExternalLink size={14} />
+                          <span>Releases</span>
                         </button>
-                      )}
-                      {!isUpdateReady && (
-                        <button 
-                          onClick={handleCheckUpdates}
-                          disabled={!electronAvailable}
-                          className="flex items-center space-x-2 px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600 font-medium transition-colors disabled:opacity-50"
-                        >
-                          <RefreshCw size={16} />
-                          <span>Check</span>
-                        </button>
-                      )}
+
+                        {isUpdateReady && (
+                          <button 
+                            onClick={() => window.electronAPI.installUpdate()}
+                            className="flex items-center space-x-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium shadow-sm transition-colors text-sm"
+                          >
+                            <Download size={16} />
+                            <span>Install & Restart</span>
+                          </button>
+                        )}
+                        {!isUpdateReady && (
+                          <button 
+                            onClick={handleCheckUpdates}
+                            disabled={!electronAvailable || isUpdateDownloading}
+                            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-sm transition-colors text-sm disabled:opacity-50"
+                          >
+                            <RefreshCw size={15} className={isUpdateDownloading ? 'animate-spin' : ''} />
+                            <span>{isUpdateDownloading ? 'Downloading...' : 'Check for Updates'}</span>
+                          </button>
+                        )}
+                      </div>
                     </div>
+
+                    {/* Progress Bar */}
+                    {isUpdateDownloading && (
+                      <div className="space-y-1.5 pt-2">
+                        <div className="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
+                          <div
+                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                            style={{ width: `${Math.max(5, updateProgress)}%` }}
+                          />
+                        </div>
+                        <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400 font-mono">
+                          <span>Downloading installer binary</span>
+                          <span>{updateProgress}%</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
 

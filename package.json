@@ -1,7 +1,7 @@
 {
   "name": "endpoint-forge",
   "productName": "Endpoint Forge",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
   "main": "dist-electron/main.cjs",
@@ -45,7 +45,8 @@
     ],
     "win": {
       "target": "nsis",
-      "icon": "logo.png"
+      "icon": "logo.png",
+      "artifactName": "${productName}.Setup.${version}.${ext}"
     },
     "forceCodeSigning": false,
     "nsis": {
@@ -53,7 +54,8 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Endpoint Forge"
+      "shortcutName": "Endpoint Forge",
+      "artifactName": "${productName}.Setup.${version}.${ext}"
     }
   },
   "dependencies": {

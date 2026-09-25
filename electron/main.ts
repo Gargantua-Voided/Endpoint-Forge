@@ -4,7 +4,9 @@ import fs from 'fs';
 import os from 'os';
 import express from 'express';
 import { autoUpdater } from 'electron-updater';
-import { execFile } from 'child_process';
+import { execFile, spawn } from 'child_process';
+import https from 'https';
+import http from 'http';
 import multer from 'multer';
 import AdmZip from 'adm-zip';
 import { createNsisRouter } from './apiRoutes';
@@ -115,6 +117,125 @@ function createWindow() {
   });
 }
 
+let fallbackDownloadedExePath: string | null = null;
+let isFallbackDownloading = false;
+
+function fetchGithubJson(url: string): Promise<any> {
+  return new Promise((resolve, reject) => {
+    https.get(url, { headers: { 'User-Agent': 'Endpoint-Forge-Updater' } }, (res) => {
+      if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        return resolve(fetchGithubJson(res.headers.location));
+      }
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        try {
+          resolve(JSON.parse(data));
+        } catch (e) {
+          reject(new Error(`Failed to parse release response: ${e}`));
+        }
+      });
+    }).on('error', reject);
+  });
+}
+
+function downloadBinaryWithProgress(url: string, destFile: string, onProgress: (pct: number) => void): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const client = url.startsWith('https') ? https : http;
+    client.get(url, { headers: { 'User-Agent': 'Endpoint-Forge-Updater' } }, (res) => {
+      if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        return resolve(downloadBinaryWithProgress(res.headers.location, destFile, onProgress));
+      }
+      if (res.statusCode !== 200) {
+        return reject(new Error(`Download failed with HTTP ${res.statusCode}`));
+      }
+      const total = parseInt(res.headers['content-length'] || '0', 10);
+      let downloaded = 0;
+      let lastReportedPct = -1;
+
+      const fileStream = fs.createWriteStream(destFile);
+      res.on('data', (chunk) => {
+        downloaded += chunk.length;
+        if (total > 0) {
+          const pct = Math.round((downloaded / total) * 100);
+          if (pct !== lastReportedPct) {
+            lastReportedPct = pct;
+            onProgress(pct);
+          }
+        }
+      });
+      res.pipe(fileStream);
+      fileStream.on('finish', () => {
+        fileStream.close();
+        resolve();
+      });
+      fileStream.on('error', (err) => {
+        fs.unlink(destFile, () => {});
+        reject(err);
+      });
+    }).on('error', reject);
+  });
+}
+
+async function attemptFallbackDownload(targetVersion?: string) {
+  if (isFallbackDownloading) return;
+  isFallbackDownloading = true;
+  logToServer(`Attempting direct GitHub release fallback download...`);
+  mainWindow?.webContents.send('update-event', {
+    type: 'checking',
+    message: 'Resolving installer binary directly from GitHub releases...'
+  });
+
+  try {
+    const releaseUrl = targetVersion
+      ? `https://api.github.com/repos/Gargantua-Voided/Endpoint-Forge/releases/tags/${targetVersion}`
+      : `https://api.github.com/repos/Gargantua-Voided/Endpoint-Forge/releases/latest`;
+
+    const releaseData = await fetchGithubJson(releaseUrl);
+    const exeAsset = releaseData.assets?.find((a: any) => a.name && a.name.toLowerCase().endsWith('.exe'));
+
+    if (!exeAsset) {
+      throw new Error(`No executable installer asset (.exe) found in release ${releaseData.tag_name || targetVersion || ''}`);
+    }
+
+    const downloadUrl = exeAsset.browser_download_url;
+    const destPath = path.join(os.tmpdir(), exeAsset.name);
+
+    mainWindow?.webContents.send('update-event', {
+      type: 'available',
+      info: { version: releaseData.tag_name || targetVersion, name: exeAsset.name }
+    });
+
+    logToServer(`Downloading installer fallback: ${exeAsset.name} from ${downloadUrl}`);
+
+    await downloadBinaryWithProgress(downloadUrl, destPath, (percent) => {
+      mainWindow?.webContents.send('update-event', {
+        type: 'progress',
+        progress: percent
+      });
+    });
+
+    fallbackDownloadedExePath = destPath;
+    logToServer(`Fallback installer downloaded successfully to: ${destPath}`);
+    mainWindow?.webContents.send('update-event', {
+      type: 'downloaded',
+      info: {
+        version: releaseData.tag_name,
+        name: exeAsset.name,
+        path: destPath
+      }
+    });
+  } catch (fallbackErr: any) {
+    logToServer(`Fallback download failed: ${fallbackErr.message}`);
+    mainWindow?.webContents.send('update-event', {
+      type: 'error',
+      message: `Update download failed: ${fallbackErr.message}`
+    });
+  } finally {
+    isFallbackDownloading = false;
+  }
+}
+
 app.whenReady().then(() => {
   createWindow();
   
@@ -132,7 +253,7 @@ app.whenReady().then(() => {
       createWindow();
     }
   });
-  
+
   // Setup auto-updater
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
@@ -146,8 +267,17 @@ app.whenReady().then(() => {
   autoUpdater.on('update-not-available', (info) => {
     mainWindow?.webContents.send('update-event', { type: 'not-available', info });
   });
-  autoUpdater.on('error', (err) => {
-    mainWindow?.webContents.send('update-event', { type: 'error', message: err.message });
+  autoUpdater.on('error', async (err) => {
+    logToServer(`AutoUpdater error: ${err.message}`);
+    // If the error is a 404 or cannot download asset due to filename mismatch
+    if (err.message && (err.message.includes('status 404') || err.message.includes('Cannot download') || err.message.includes('404'))) {
+      logToServer(`Detected 404 download issue in autoUpdater. Initiating direct GitHub release fallback...`);
+      const match = err.message.match(/releases\/download\/([^/]+)\//);
+      const versionTag = match ? match[1] : undefined;
+      await attemptFallbackDownload(versionTag);
+    } else {
+      mainWindow?.webContents.send('update-event', { type: 'error', message: err.message });
+    }
   });
   autoUpdater.on('download-progress', (progressObj) => {
     mainWindow?.webContents.send('update-event', { type: 'progress', progress: progressObj.percent });
@@ -342,7 +472,14 @@ ipcMain.handle('check-updates', async () => {
 });
 
 ipcMain.handle('install-update', () => {
-  autoUpdater.quitAndInstall();
+  if (fallbackDownloadedExePath && fs.existsSync(fallbackDownloadedExePath)) {
+    logToServer(`Launching fallback installer: ${fallbackDownloadedExePath}`);
+    const child = spawn(fallbackDownloadedExePath, [], { detached: true, stdio: 'ignore' });
+    child.unref();
+    app.quit();
+  } else {
+    autoUpdater.quitAndInstall();
+  }
 });
 
 ipcMain.handle('select-files', async () => {
