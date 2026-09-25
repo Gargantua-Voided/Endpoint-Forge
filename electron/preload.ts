@@ -25,7 +25,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   selectFiles: () => ipcRenderer.invoke('select-files'),
   selectFolder: () => ipcRenderer.invoke('select-folder'),
   openExternal: (url: string) => ipcRenderer.send('open-external', url),
-  selectSaveFile: (defaultName: string) => ipcRenderer.invoke('select-save-file', defaultName),
+  selectSaveFile: (defaultName: string, filters?: { name: string; extensions: string[] }[]) => ipcRenderer.invoke('select-save-file', defaultName, filters),
   packageIntuneLocal: (sourceDir: string, setupFile: string, outPath: string) => 
     ipcRenderer.invoke('package-intune-local', sourceDir, setupFile, outPath),
   packageIntuneLocalFiles: (filePaths: string[], setupFile: string, outPath: string) => ipcRenderer.invoke('package-intune-local-files', filePaths, setupFile, outPath),

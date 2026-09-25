@@ -500,11 +500,35 @@ ipcMain.handle('select-folder', async () => {
   return result.filePaths[0];
 });
 
-ipcMain.handle('select-save-file', async (_e, defaultName) => {
+ipcMain.handle('select-save-file', async (_e, defaultName: string, customFilters?: { name: string; extensions: string[] }[]) => {
   if (!mainWindow) return null;
+
+  let filters = customFilters;
+  if (!filters || filters.length === 0) {
+    const ext = path.extname(defaultName).replace('.', '').toLowerCase();
+    if (ext === 'exe') {
+      filters = [
+        { name: 'Windows Setup Executable (*.exe)', extensions: ['exe'] },
+        { name: 'All Files (*.*)', extensions: ['*'] }
+      ];
+    } else if (ext === 'intunewin') {
+      filters = [
+        { name: 'Intune Package (*.intunewin)', extensions: ['intunewin'] },
+        { name: 'All Files (*.*)', extensions: ['*'] }
+      ];
+    } else if (ext) {
+      filters = [
+        { name: `${ext.toUpperCase()} Files (*.${ext})`, extensions: [ext] },
+        { name: 'All Files (*.*)', extensions: ['*'] }
+      ];
+    } else {
+      filters = [{ name: 'All Files (*.*)', extensions: ['*'] }];
+    }
+  }
+
   const result = await dialog.showSaveDialog(mainWindow, {
     defaultPath: defaultName,
-    filters: [{ name: 'Intune Package', extensions: ['intunewin'] }]
+    filters
   });
   if (result.canceled) return null;
   return result.filePath;

@@ -141,7 +141,10 @@ export default function IntunePackager() {
     
     try {
       const defaultName = setupFile.split('.')[0] + '.intunewin';
-      const savePath = await window.electronAPI.selectSaveFile(defaultName);
+      const savePath = await window.electronAPI.selectSaveFile(defaultName, [
+        { name: 'Intune Package (*.intunewin)', extensions: ['intunewin'] },
+        { name: 'All Files (*.*)', extensions: ['*'] }
+      ]);
       
       if (!savePath) {
         setIsProcessing(false);

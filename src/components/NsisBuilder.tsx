@@ -125,7 +125,12 @@ export default function NsisBuilder() {
   const handleZipUpload = async (file: File) => {
     setError(null);
     setZipFile(file);
-    setLocalZipPath(null);
+    const nativePath = (file as any).path;
+    if (nativePath && typeof nativePath === 'string') {
+      setLocalZipPath(nativePath);
+    } else {
+      setLocalZipPath(null);
+    }
     setLocalFolderPath(null);
 
     // Call server to scan zip and detect executables
@@ -293,7 +298,10 @@ export default function NsisBuilder() {
     if (electronAvailable) {
       try {
         const defaultOutName = `${options.appName.replace(/[^a-zA-Z0-9_-]/g, '_')}-Setup-${options.appVersion}.exe`;
-        const savePath = await window.electronAPI.selectSaveFile(defaultOutName);
+        const savePath = await window.electronAPI.selectSaveFile(defaultOutName, [
+          { name: 'Windows Setup Executable (*.exe)', extensions: ['exe'] },
+          { name: 'All Files (*.*)', extensions: ['*'] }
+        ]);
 
         if (!savePath) {
           setIsProcessing(false);
@@ -301,16 +309,41 @@ export default function NsisBuilder() {
           return;
         }
 
+        const finalSavePath = savePath.toLowerCase().endsWith('.exe') ? savePath : `${savePath}.exe`;
+        const finalFileName = finalSavePath.split(/[/\\]/).pop() || defaultOutName;
+
         setProcessStep('Compiling Modern UI 2 Windows installer with NSIS...');
 
         let result: { success: boolean; error?: string };
-        if (localZipPath) {
-          result = await window.electronAPI.buildNsisLocal(localZipPath, options, savePath);
+        const effectiveZip = localZipPath || (zipFile ? (zipFile as any).path : null);
+
+        if (effectiveZip) {
+          result = await window.electronAPI.buildNsisLocal(effectiveZip, options, finalSavePath);
         } else if (localFolderPath) {
-          result = await window.electronAPI.buildNsisFolder(localFolderPath, options, savePath);
+          result = await window.electronAPI.buildNsisFolder(localFolderPath, options, finalSavePath);
         } else if (zipFile) {
-          // If in electron but user dropped a web file, use form post or buffer
-          throw new Error('Please select a local file or folder in Desktop mode.');
+          // If in electron without native path, send to backend API
+          const formData = new FormData();
+          formData.append('zipFile', zipFile);
+          formData.append('options', JSON.stringify(options));
+          const res = await fetch('/api/nsis/build', {
+            method: 'POST',
+            body: formData
+          });
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.error || 'Failed to build NSIS installer.');
+          }
+          const blob = await res.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = finalFileName;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          window.URL.revokeObjectURL(url);
+          result = { success: true };
         } else {
           throw new Error('No source specified.');
         }
@@ -320,8 +353,8 @@ export default function NsisBuilder() {
         }
 
         setSuccessInfo({
-          fileName: defaultOutName,
-          path: savePath
+          fileName: finalFileName,
+          path: finalSavePath
         });
         resetForm();
       } catch (err: any) {

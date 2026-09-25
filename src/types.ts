@@ -29,7 +29,7 @@ export interface ElectronAPI {
   installUpdate: () => Promise<void>;
   selectFiles: () => Promise<string[] | null>;
   selectFolder: () => Promise<string | null>;
-  selectSaveFile: (defaultName: string) => Promise<string | null>;
+  selectSaveFile: (defaultName: string, filters?: { name: string; extensions: string[] }[]) => Promise<string | null>;
   openExternal: (url: string) => void;
   packageIntuneLocal: (sourceDir: string, setupFile: string, outPath: string) => Promise<{ success: boolean; error?: string }>;
   packageIntuneLocalFiles: (filePaths: string[], setupFile: string, outPath: string) => Promise<{success: boolean, path?: string, error?: string}>;
